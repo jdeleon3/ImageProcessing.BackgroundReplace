@@ -4,6 +4,8 @@ from PIL import Image, ImageTk, ImageOps
 import numpy as np
 import cv2
 from imageprocessor import ImageProcessor
+from colorbackgroundprocessor import ColorBackgroundProcessor
+from transparentprocessor import TransparentProcessor
 
 class AppUI:
     """Main UI class for the application."""
@@ -11,7 +13,9 @@ class AppUI:
 
     def __init__(self, root:tk.Tk):
         self.root = root
-        self.processor = ImageProcessor()
+        self.img_processor = ImageProcessor()
+        self.colorbg_processor = ColorBackgroundProcessor()
+        self.transparent_processor = TransparentProcessor()
         self.background_image = None
         self.bounding_box = [(0, 0), (0, 0)]        
         self.rect = None
@@ -137,6 +141,24 @@ class AppUI:
                 new_width = int(self.preview_image_max_height * self.aspect_ratio)
             return image.resize((new_width, new_height), resample=Image.LANCZOS)
         return image
+    
+    def adjust_bounding_box_original_image(self):
+        """
+        Adjust the bounding box coordinates to expand to the aspect ratio of the original image.
+        """
+        if self.original_image is not None:
+            # translate bounding box coordinates to coordinates on the original image
+            x1, y1 = self.bounding_box[0]
+            x2, y2 = self.bounding_box[1]
+            original_width, original_height = self.original_image.shape[1], self.original_image.shape[0]
+            
+            x1 = int(x1 * original_width / self.preview_image.width())
+            y1 = int(y1 * original_height / self.preview_image.height())
+            x2 = int(x2 * original_width / self.preview_image.width())
+            y2 = int(y2 * original_height / self.preview_image.height())
+
+            self.bounding_box = [(x1, y1), (x2, y2)]
+
 
     def load_image(self):
         """
@@ -272,19 +294,19 @@ class AppUI:
         if self.image_path is None or not self.is_bounding_box_valid():
             messagebox.showerror("Error", "Please load an image and select a bounding box.")
             return
-
+        self.adjust_bounding_box_original_image()
         if self.selection_var.get() == "transparent":
-            self.processed_image = self.processor.process_image_to_transparent_background(self.image_path, self.bounding_box)
+            self.processed_image = self.transparent_processor.process_image(self.image_path, self.bounding_box)
         elif self.selection_var.get() == "color":
             if self.replacement_color is None:
                 messagebox.showerror("Error", "Please select a replacement color.")
                 return
-            self.processed_image = self.processor.process_image_to_color_background(self.image_path, self.bounding_box, self.replacement_color)
+            self.processed_image = self.colorbg_processor.process_image(self.image_path, self.bounding_box, self.replacement_color)
         elif self.selection_var.get() == "image":
             if not self.background_image_loaded:
                 messagebox.showerror("Error", "Please load a background image.")
                 return
-            self.processed_image = self.processor.process_image_to_image_background(self.image_path, self.bounding_box, self.background_image_path)
+            self.processed_image = self.img_processor.process_image(self.image_path, self.bounding_box, self.background_image_path)
 
         if self.processed_image is not None:
             cv2.imshow("Processed Image", self.processed_image)
