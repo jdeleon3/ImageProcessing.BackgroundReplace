@@ -13,6 +13,34 @@ def get_file_path():
     file_path = askopenfilename(title="Select a file")
     return file_path
 
+def load_image_from_path(file_path, max_dim=800):
+    """
+    Loads and resizes an image from a given file path.
+
+    Args:
+        file_path (str): Path to the image
+        max_dim (int): Max dimension (width or height) to resize to.
+
+    Returns:
+        tuple: (str path, np.ndarray image or None if error)
+    """
+    try:
+        image = cv2.imread(file_path)
+        if image is None:
+            raise FileNotFoundError("Could not load image.")
+        logging.info(f"Loaded image from: {file_path}")
+
+        h, w = image.shape[:2]
+        scale = max_dim / max(h, w)
+        if scale < 1:
+            image = cv2.resize(image, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
+            logging.info(f"Resized image to: {image.shape[1]}x{image.shape[0]}")
+        return file_path, image
+
+    except Exception as e:
+        logging.error(f"Failed to load image: {e}")
+        return None, None
+    
 def save_file(image):
     root = Tk()
     root.withdraw()  # Hide the root window
@@ -195,7 +223,8 @@ def get_user_manual_mask(image):
     mask = np.ones_like(gray, dtype=np.uint8)
     has_drawn = False
     print("Instructions:")
-    print("1. Click and drag to draw a bounding box.")
+    print("1. Left-Click and drag to draw lines to mark background areas.")
+    print("1. Right-Click and drag to draw lines to mark foreground areas.")
     print("2. Press ENTER or SPACE to confirm.")
     print("3. Press ESC to cancel.")
 
@@ -294,7 +323,7 @@ def main():
         print(f"Selected file: {file_path}")
     else:
         print("No file selected.")
-    image = cv2.imread(file_path)
+    image = load_image_from_path(file_path)[1]
     if image is None:
         print("Error loading image.")
         return

@@ -1,0 +1,52 @@
+name: Generate PDF Report
+on:
+    push:
+        branches:
+            - main
+            - 'topics/**'
+        paths:
+            - '**.ipynb'
+            - '.github/workflows/report-generate.yml'
+    
+
+jobs:
+    generate-report:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout code 
+              uses: actions/checkout@v3
+
+            - name: Setup Python
+              uses: actions/setup-python@v4
+              with:
+                python-version: 3.11
+
+            - name: Install dependencies
+              run: |
+                sudo apt-get update                
+                sudo apt-get install -y texlive-xetex texlive-fonts-recommended texlive-plain-generic pandoc
+                pip install nbconvert jupyter
+
+            - name: Generate PDF Report
+              run: |
+                mkdir -p ml/EDA/reports
+                for notebook in ml/EDA/*.ipynb; do
+                    filename=$(basename "$notebook" .ipynb)
+                    echo "Generating PDF for $notebook"
+                    jupyter nbconvert --to pdf "$notebook" --output-dir=./ml/EDA/reports --output="$filename" --LatexPreprocessor.title "Image Background Removal with OpenCV"
+                done
+            - name: commit PDFs
+              run: |
+                git config user.name "github-actions"
+                git config user.email "github-actions@github.com"
+                git add ml/EDA/reports/*.pdf
+                if git diff --cached --quiet; then
+                    echo "No changes to commit"
+                else
+                    git commit -m "Add generated PDF reports"
+                    git push
+                fi
+
+
+        
