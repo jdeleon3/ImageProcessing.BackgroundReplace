@@ -30,17 +30,17 @@ jobs:
 
             - name: Generate PDF Report
               run: |
-                mkdir -p ml/EDA/reports
-                for notebook in ml/EDA/*.ipynb; do
+                mkdir -p reports
+                for notebook in *.ipynb; do
                     filename=$(basename "$notebook" .ipynb)
                     echo "Generating PDF for $notebook"
-                    jupyter nbconvert --to pdf "$notebook" --output-dir=./ml/EDA/reports --output="$filename" --LatexPreprocessor.title "Image Background Removal with OpenCV"
+                    jupyter nbconvert --to pdf "$notebook" --output-dir=./reports --output="$filename" --LatexPreprocessor.title "Image Background Removal with OpenCV"
                 done
             - name: commit PDFs
               run: |
                 git config user.name "github-actions"
                 git config user.email "github-actions@github.com"
-                git add ml/EDA/reports/*.pdf
+                git add reports/*.pdf
                 if git diff --cached --quiet; then
                     echo "No changes to commit"
                 else
